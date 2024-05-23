@@ -1,10 +1,3 @@
-//type TokenType string
-
-const Token = struct {
-    type: []const u8,
-    literal: []const u8,
-};
-
 const ILLEGAL = "ILLEGAL";
 const EOF = "EOF";
 
