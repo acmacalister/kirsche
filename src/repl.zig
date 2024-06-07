@@ -7,23 +7,21 @@ const prompt = ">> ";
 pub fn start(in: io.AnyReader, out: io.AnyWriter) !void {
     while (true) {
         try out.print(prompt, .{});
-        var buf: [1024]u8 = undefined;
-        try in.streamUntilDelimiter(&buf, '\n', null);
+        var buffer: [1024]u8 = undefined;
+        var stream = std.io.fixedBufferStream(&buffer);
+        try in.streamUntilDelimiter(stream.writer(), '\n', null);
 
-        var l = lexer.Lexer.init(&buf);
+        var l = lexer.Lexer.init(&buffer);
 
         while (true) {
             const tok = l.nextToken();
 
-            if (tok.Type == lexer.TokenType.eof) {
-                break;
+            switch (tok.Type) {
+                lexer.TokenType.eof => break,
+                lexer.TokenType.illegal => break,
+                else => {},
             }
-
-            try out.print(" ", .{});
-            try out.print("{any}", .{tok.Type});
-            try out.print(": ", .{});
-            try out.print("{any}", .{tok.Literal});
-            try out.print("\n", .{});
+            try out.print("{s}: {s}\n", .{ @tagName(tok.Type), tok.Literal });
         }
     }
 }

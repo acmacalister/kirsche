@@ -53,25 +53,20 @@ pub const Lexer = struct {
     ch: u8,
 
     pub fn init(input: []const u8) Lexer {
-        return Lexer{
+        var l = Lexer{
             .input = input,
             .pos = 0,
             .readPosition = 0,
             .ch = 0,
         };
+        l.readChar();
+        return l;
     }
 
     pub fn nextToken(self: *Lexer) Token {
         self.skipWhitespace();
         const tok = switch (self.ch) {
-            '=' => {
-                if (self.peekChar() == '=') {
-                    self.readChar();
-                    return Token{ .Type = .equal, .Literal = "==" };
-                } else {
-                    return Token{ .Type = .assign, .Literal = "=" };
-                }
-            },
+            '=' => self.handleAssignment(),
             ';' => Token{ .Type = .semicolon, .Literal = ";" },
             '(' => Token{ .Type = .lparen, .Literal = "(" },
             ')' => Token{ .Type = .rparen, .Literal = ")" },
@@ -80,20 +75,31 @@ pub const Lexer = struct {
             '{' => Token{ .Type = .lbrace, .Literal = "{" },
             '}' => Token{ .Type = .rbrace, .Literal = "}" },
             0 => Token{ .Type = .eof, .Literal = "" },
-            else => {
-                if (isLetter(self.ch)) {
-                    const literal = self.readIdentifier();
-                    return Token{ .Type = lookupIdent(literal), .Literal = literal };
-                } else if (ascii.isDigit(self.ch)) {
-                    const literal = self.readNumber();
-                    return Token{ .Type = .integer, .Literal = literal };
-                } else {
-                    return Token{ .Type = .illegal, .Literal = "" }; //&self.ch TODO: something with char
-                }
-            },
+            else => self.handleOtherToken(),
         };
         self.readChar();
         return tok;
+    }
+
+    fn handleAssignment(self: *Lexer) Token {
+        if (self.peekChar() == '=') {
+            self.readChar();
+            return Token{ .Type = .equal, .Literal = "==" };
+        } else {
+            return Token{ .Type = .assign, .Literal = "=" };
+        }
+    }
+
+    fn handleOtherToken(self: *Lexer) Token {
+        if (isLetter(self.ch)) {
+            const literal = self.readIdentifier();
+            return Token{ .Type = lookupIdent(literal), .Literal = literal };
+        } else if (ascii.isDigit(self.ch)) {
+            const literal = self.readNumber();
+            return Token{ .Type = .integer, .Literal = literal };
+        } else {
+            return Token{ .Type = .illegal, .Literal = "" };
+        }
     }
 
     fn skipWhitespace(self: *Lexer) void {
@@ -129,7 +135,7 @@ pub const Lexer = struct {
     }
 
     fn lookupIdent(ident: []const u8) TokenType {
-        return keywords.get(ident) orelse .illegal;
+        return keywords.get(ident) orelse .identifier;
     }
 
     fn readNumber(self: *Lexer) []const u8 {
